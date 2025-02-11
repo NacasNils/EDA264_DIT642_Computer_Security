@@ -37,6 +37,10 @@ mypwent *mygetpwnam(char *name) {
 				ent.passwd, ent.passwd_salt, &ent.pwfailed, &ent.pwage) != 6)
 			break;
 
+		printf("ent.pwname: %s\n", ent.pwname);
+		printf("pwname: %s\n", pwname);
+		printf("name: %s\n", name);
+
 		if (strcmp(pwname, name) == 0) {
 			fclose(file);
 			return &ent;

@@ -12,7 +12,7 @@
 #include <sys/types.h>
 #include <crypt.h>
 /* Uncomment next line in step 2 */
-/* #include "pwent.h" */
+#include "pwent.h"
 
 #define TRUE 1
 #define FALSE 0
@@ -26,7 +26,7 @@ void sighandler() {
 
 int main(int argc, char *argv[]) {
 
-	struct passwd *passwddata; /* this has to be redefined in step 2 */
+	mypwent *passwddata; /* this has to be redefined in step 2 */
 	/* see pwent.h */
 
 	char important1[LENGTH] = "**IMPORTANT 1**";
@@ -52,8 +52,11 @@ int main(int argc, char *argv[]) {
 		fflush(NULL); /* Flush all  output buffers */
 		__fpurge(stdin); /* Purge any data in stdin buffer */
 
-		if (gets(user) == NULL) /* gets() is vulnerable to buffer */
+		if (fgets(user, LENGTH, stdin) == NULL) /* gets() is vulnerable to buffer */ // TODO I HAD TO SWITCH TO FGETS FOR IT TO COMPILE
 			exit(0); /*  overflow attacks.  */
+
+		/* Remove newline character if present */
+		user[strcspn(user, "\n")] = 0;
 
 		/* check to see if important variable is intact after input of login name - do not remove */
 		printf("Value of variable 'important 1' after input of login name: %*.*s\n",
@@ -62,13 +65,18 @@ int main(int argc, char *argv[]) {
 		 		LENGTH - 1, LENGTH - 1, important2);
 
 		user_pass = getpass(prompt);
-		passwddata = getpwnam(user);
+		passwddata = mygetpwnam(user); // THIS CALLS FUNCTION IN pwent.c WHICH READS FROM FILE AND RETURNS POINTER TO A STRUCT WITH USER DATA
 
 		if (passwddata != NULL) {
+			printf("Debug: User found: %s\n", passwddata->pwname);
+			printf("Debug: Stored password: %s\n", passwddata->passwd);
+			printf("Debug: Stored salt: %s\n", passwddata->passwd_salt);
 			/* You have to encrypt user_pass for this to work */
+			char *encrypted_pass = crypt(user_pass, passwddata->passwd_salt);
+			printf("Debug: Encrypted password: %s\n", encrypted_pass);
 			/* Don't forget to include the salt */
 
-			if (!strcmp(user_pass, passwddata->pw_passwd)) {
+			if (!strcmp(user_pass, passwddata->passwd)) {
 
 				printf(" You're in !\n");
 
@@ -76,6 +84,8 @@ int main(int argc, char *argv[]) {
 				/*  start a shell, use execve(2) */
 
 			}
+		} else {
+			printf("Debug: User not found\n");
 		}
 		printf("Login Incorrect \n");
 	}
