@@ -68,26 +68,42 @@ int main(int argc, char *argv[]) {
 		passwddata = mygetpwnam(user); // THIS CALLS FUNCTION IN pwent.c WHICH READS FROM FILE AND RETURNS POINTER TO A STRUCT WITH USER DATA
 
 		if (passwddata != NULL) {
-			printf("Debug: User found: %s\n", passwddata->pwname);
-			printf("Debug: Stored password: %s\n", passwddata->passwd);
-			printf("Debug: Stored salt: %s\n", passwddata->passwd_salt);
+			// printf("Debug: User found: %s\n", passwddata->pwname);
+			// printf("Debug: Stored password: %s\n", passwddata->passwd);
+			// printf("Debug: Stored salt: %s\n", passwddata->passwd_salt);
 			/* You have to encrypt user_pass for this to work */
 			char *encrypted_pass = crypt(user_pass, passwddata->passwd_salt);
 			printf("Debug: Encrypted password: %s\n", encrypted_pass);
+			printf("Debug: Stored password: %s\n", passwddata->passwd);
 			/* Don't forget to include the salt */
 
-			if (!strcmp(user_pass, passwddata->passwd)) {
-
+			if (!strcmp(encrypted_pass, passwddata->passwd)) {
+				printf("Number of login attempts: %d\n", passwddata->pwfailed);
+				passwddata->pwfailed = 0;
+				passwddata->pwage++;
+				if(passwddata->pwage > 3) {
+					printf("Password has expired, please change it!\n");
+					char *new_user_pass = getpass("New password: ");
+					char *cryptedNewPass = crypt(new_user_pass, passwddata->passwd_salt);
+					strcpy(passwddata->passwd, cryptedNewPass);
+					printf("Password changed to: %s\n", passwddata->passwd);
+					passwddata->pwage = 0;
+					mysetpwent(user, passwddata);
+					continue;
+				}
+				mysetpwent(user, passwddata);
 				printf(" You're in !\n");
 
 				/*  check UID, see setuid(2) */
 				/*  start a shell, use execve(2) */
 
+			} else {
+				passwddata->pwfailed++;
+				mysetpwent(user, passwddata);
+				printf("Password Incorrect \n");
 			}
-		} else {
-			printf("Debug: User not found\n");
 		}
-		printf("Login Incorrect \n");
+		printf("Looping \n");
 	}
 	return 0;
 }
