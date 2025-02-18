@@ -19,6 +19,24 @@
 #define LENGTH 16
 
 void sighandler() {
+	// Ignore SIGINT (Ctrl-C)
+	if (signal(SIGINT, SIG_IGN) == SIG_ERR) {
+		perror("signal");
+		exit(1);
+	}
+	// Ignore SIGQUIT (Ctrl-\)
+	if (signal(SIGQUIT, SIG_IGN) == SIG_ERR) {
+		perror("signal");
+		exit(1);
+	}
+	// Ignore SIGTSTP (Ctrl-Z)
+	if (signal(SIGTSTP, SIG_IGN) == SIG_ERR) {
+		perror("signal");
+		exit(1);
+	}	
+	// Ignore SIGHUP (hangup)
+	// Do not uncomment this line, it will cause the program to not exit when terminal is closed
+	// signal(SIGHUP, SIG_IGN);
 
 	/* add signalhandling routines here */
 	/* see 'man 2 signal' */
@@ -52,7 +70,7 @@ int main(int argc, char *argv[]) {
 		fflush(NULL); /* Flush all  output buffers */
 		__fpurge(stdin); /* Purge any data in stdin buffer */
 
-		if (fgets(user, LENGTH, stdin) == NULL) /* gets() is vulnerable to buffer */ // TODO I HAD TO SWITCH TO FGETS FOR IT TO COMPILE
+		if (fgets(user, LENGTH, stdin) == NULL) /* gets() is vulnerable to buffer */ 
 			exit(0); /*  overflow attacks.  */
 
 		/* Remove newline character if present */
@@ -68,9 +86,6 @@ int main(int argc, char *argv[]) {
 		passwddata = mygetpwnam(user); // THIS CALLS FUNCTION IN pwent.c WHICH READS FROM FILE AND RETURNS POINTER TO A STRUCT WITH USER DATA
 
 		if (passwddata != NULL) {
-			// printf("Debug: User found: %s\n", passwddata->pwname);
-			// printf("Debug: Stored password: %s\n", passwddata->passwd);
-			// printf("Debug: Stored salt: %s\n", passwddata->passwd_salt);
 			/* You have to encrypt user_pass for this to work */
 			char *encrypted_pass = crypt(user_pass, passwddata->passwd_salt);
 			printf("Debug: Encrypted password: %s\n", encrypted_pass);
@@ -88,18 +103,47 @@ int main(int argc, char *argv[]) {
 					strcpy(passwddata->passwd, cryptedNewPass);
 					printf("Password changed to: %s\n", passwddata->passwd);
 					passwddata->pwage = 0;
-					mysetpwent(user, passwddata);
+					if (mysetpwent(user, passwddata) == -1) {
+						printf("Error changing password\n");
+						exit(1);
+					};
 					continue;
 				}
-				mysetpwent(user, passwddata);
+				if (mysetpwent(user, passwddata) == -1) {
+					printf("Error updating login data\n");
+					exit(1);
+				}
+
 				printf(" You're in !\n");
+
+				int suid = setuid(passwddata->uid);
+				if (suid == -1) {
+					// printf("uid: %d\n", passwddata->uid);
+					printf("suid: %d\n", suid);
+					perror("setuid");
+					exit(1);
+				}
+
+				char *shell = "/bin/sh";
+				char *args[] = {shell, NULL};
+				execve(shell, args, NULL);
 
 				/*  check UID, see setuid(2) */
 				/*  start a shell, use execve(2) */
 
 			} else {
 				passwddata->pwfailed++;
-				mysetpwent(user, passwddata);
+				if (passwddata->pwfailed > 2) {
+					printf("Too many failed login attempts, account locked for: %d seconds\n", 10 * passwddata->pwfailed);
+					for (int i = 0; i < 10 * passwddata->pwfailed; i++) {
+						printf("Sleeping for: %d\n", 10 * passwddata->pwfailed - i);
+						sleep(1);
+					}
+				}
+				if (mysetpwent(user, passwddata) == -1) {
+					printf("Error updating login data\n");
+					exit(1);
+				}
 				printf("Password Incorrect \n");
 			}
 		}
