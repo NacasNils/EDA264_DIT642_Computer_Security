@@ -17,39 +17,38 @@ db.exec(
 		'User Integer NOT NULL,                 ' +
 		'Html TEXT)'
 );
-
+// This is fine now!
 export function checkUserPass(username: string, password: string): { UID: number; Error?: Error } {
 	const hash = md5(password);
-	const command =
-		"SELECT UID FROM Table_Users WHERE Username='" + username + "' AND Password='" + hash + "'";
+	const command = 'SELECT UID FROM Table_Users WHERE Username=? AND Password=?';
 	try {
-		const uid = db.prepare(command).get() as { UID: number };
+		const uid = db.prepare(command).get(username, hash) as { UID: number };
 		return uid;
 	} catch (e) {
 		return { UID: 0, Error: e as Error };
 	}
 }
-
+// This is fine now!
 export function getUserFromSessionID(sid: string): { Username: string; Error?: Error } {
-	const command = "SELECT Username FROM Table_Users WHERE SID='" + sid + "'";
+	const command = 'SELECT Username FROM Table_Users WHERE SID=?';
 	try {
-		const username = db.prepare(command).get() as { Username: string };
+		const username = db.prepare(command).get(sid) as { Username: string };
 		return username;
 	} catch (e) {
 		return { Username: '', Error: e as Error };
 	}
 }
-
+// This is fine now!
 export function getUIDFromSessionID(sid: string): number {
-	const command = "SELECT UID FROM Table_Users WHERE SID='" + sid + "'";
-	const uid = db.prepare(command).get() as { UID: number };
+	const command = 'SELECT UID FROM Table_Users WHERE SID=?';
+	const uid = db.prepare(command).get(sid) as { UID: number };
 	return uid.UID;
 }
-
+// This is fine now!
 export function addUserSessionID(uid: number, sid: string): boolean {
-	const command = "UPDATE Table_Users SET SID='" + sid + "' WHERE UID='" + uid + "'";
+	const command = 'UPDATE Table_Users SET SID=? WHERE UID=?';
 	try {
-		db.prepare(command).run();
+		db.prepare(command).run(uid, sid);
 		return true;
 	} catch {
 		return false;
