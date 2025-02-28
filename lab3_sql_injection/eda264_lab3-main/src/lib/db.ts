@@ -17,7 +17,7 @@ db.exec(
 		'User Integer NOT NULL,                 ' +
 		'Html TEXT)'
 );
-// This is fine now!
+
 export function checkUserPass(username: string, password: string): { UID: number; Error?: Error } {
 	const hash = md5(password);
 	const command = 'SELECT UID FROM Table_Users WHERE Username=? AND Password=?';
@@ -28,7 +28,7 @@ export function checkUserPass(username: string, password: string): { UID: number
 		return { UID: 0, Error: e as Error };
 	}
 }
-// This is fine now!
+
 export function getUserFromSessionID(sid: string): { Username: string; Error?: Error } {
 	const command = 'SELECT Username FROM Table_Users WHERE SID=?';
 	try {
@@ -38,23 +38,23 @@ export function getUserFromSessionID(sid: string): { Username: string; Error?: E
 		return { Username: '', Error: e as Error };
 	}
 }
-// This is fine now!
+
 export function getUIDFromSessionID(sid: string): number {
 	const command = 'SELECT UID FROM Table_Users WHERE SID=?';
 	const uid = db.prepare(command).get(sid) as { UID: number };
 	return uid.UID;
 }
-// This is fine now!
+
 export function addUserSessionID(uid: number, sid: string): boolean {
 	const command = 'UPDATE Table_Users SET SID=? WHERE UID=?';
 	try {
-		db.prepare(command).run(uid, sid);
+		db.prepare(command).run(sid, uid);
 		return true;
 	} catch {
 		return false;
 	}
 }
-// SANITIZED FUNCTION RIGHT HERE !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
 export function addComment(sid: string, comment: string): { done: boolean; Error?: Error } {
 	const uid = getUIDFromSessionID(sid);
 	const day = new Date();
@@ -67,7 +67,9 @@ export function addComment(sid: string, comment: string): { done: boolean; Error
 	}
 }
 
-export function getComments(): [{ Timestamp: string; Username: string; Html: string }] {
+export function getComments(): [
+	{ Timestamp: string; Username: string; Html: string }
+] {
 	const command =
 		'SELECT Timestamp, Username, Html FROM ' +
 		'Table_Comments INNER JOIN Table_Users ON ' +
@@ -77,3 +79,4 @@ export function getComments(): [{ Timestamp: string; Username: string; Html: str
 	];
 	return result;
 }
+
